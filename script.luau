@@ -111,7 +111,57 @@ local TemplatesTabel = {
 	}
 }
 
-print(TemplatesTabel["2_Num"].Text)
+local function CreateButton(Type,Text,Layorder, Parent)
+	if Type == "ButtonSlider" then
+		
+	elseif Type == "Button" then
+		
+	elseif Type == "Text" then
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Parent
+		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.Text = Text
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.025,0)
+		UICorner.Parent = Textlabel
+	elseif Type == "ToggleButton" then
+		
+	end
+end
+
+local function ClearCatagory(Cat)
+	for i,v in pairs(Cat:GetChildren()) do
+		if not v:IsA("UIGridLayout") then
+			v:Destroy()
+		end	
+	end
+end
+
+local function SetCatagory(Name,Parent)
+	ClearCatagory(Parent)
+	if Name == "PlayerButton" then
+		CreateButton("Text","I Love Pizza", 1, Parent)
+	end
+end
 
 local function SetSettings(Type)
 	if Type == "Start" then
@@ -145,6 +195,7 @@ local function CreateGUI()
 	MainGUI.Name = "MainGUI"
 	MainGUI.Enabled = true
 	MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	MainGUI.DisplayOrder = 999999999
 
 	local MainFrame = Instance.new("Frame")
 	MainFrame.Parent = MainGUI
@@ -268,6 +319,45 @@ local function CreateGUI()
 	UIStroke_ScrollFrameMain.Transparency = 0
 	UIStroke_ScrollFrameMain.LineJoinMode = Enum.LineJoinMode.Round
 	UIStroke_ScrollFrameMain.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	
+	local ScrollingFrame_Main = Instance.new("ScrollingFrame")
+	ScrollingFrame_Main.Parent =	ScrollFrameMain
+	ScrollingFrame_Main.Archivable = true
+	ScrollingFrame_Main.Active = true
+	ScrollingFrame_Main.AnchorPoint = Vector2.new(0.5,0.5)
+	ScrollingFrame_Main.BackgroundColor3 = Color3.fromRGB(15,15,15)
+	ScrollingFrame_Main.BackgroundTransparency = 1
+	ScrollingFrame_Main.Interactable = true
+	ScrollingFrame_Main.Name = "ScrollingFrame"
+	ScrollingFrame_Main.Position = UDim2.new(0.5,0,0.5,0)
+	ScrollingFrame_Main.Rotation = 0
+	ScrollingFrame_Main.Size = UDim2.new(0.97,0,0.98,0)
+	ScrollingFrame_Main.Visible = true
+	ScrollingFrame_Main.CanvasSize = UDim2.new(0,0,3,0)
+	ScrollingFrame_Main.ScrollingDirection = Enum.ScrollingDirection.Y
+	ScrollingFrame_Main.ScrollBarThickness = 6 -- 6
+	ScrollingFrame_Main.VerticalScrollBarPosition = Enum.VerticalScrollBarPosition.Right
+	ScrollingFrame_Main.ScrollBarImageColor3 = Color3.fromRGB(0,0,0)
+	ScrollingFrame_Main.Selectable = false
+	
+	local ScrollFrame_Frame = Instance.new("Frame")
+	ScrollFrame_Frame.Parent = ScrollingFrame_Main
+	ScrollFrame_Frame.Size = UDim2.new(0.95, 0, 0.98, 0)
+	ScrollFrame_Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	ScrollFrame_Frame.Position = UDim2.new(0.5,0,0.5,0)
+	ScrollFrame_Frame.Name = "Frame"
+	ScrollFrame_Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	ScrollFrame_Frame.BackgroundTransparency = 1
+	ScrollFrame_Frame.LayoutOrder = 0
+	
+	local UIGridLayout = Instance.new("UIGridLayout")
+	UIGridLayout.Parent = ScrollFrame_Frame
+	UIGridLayout.CellPadding = UDim2.new(0,0,0.017,0)
+	UIGridLayout.CellSize = UDim2.new(0.8,0,0.07,0)
+	UIGridLayout.FillDirection = Enum.FillDirection.Vertical
+	UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	UIGridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+	UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 	local Title_HolderFrame = Instance.new("TextLabel")
 	Title_HolderFrame.Parent = HolderFrame
@@ -326,6 +416,7 @@ local function CreateGUI()
 	ScrollingFrame.ScrollBarThickness = 4 -- 6
 	ScrollingFrame.VerticalScrollBarPosition = Enum.VerticalScrollBarPosition.Right
 	ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0,0,0)
+	ScrollingFrame.Selectable = false
 	
 	local MainFrame_ScrollingFrame = Instance.new("Frame")
 	MainFrame_ScrollingFrame.Parent = ScrollingFrame
@@ -444,6 +535,10 @@ local function CreateGUI()
 		Title_Template.TextYAlignment = Enum.TextYAlignment.Center
 		Title_Template.Name = "Title"
 		Title_Template.Selectable = false
+		
+		Template.MouseButton1Down:Connect(function()
+			SetCatagory(Template.Name,PlayerGUI:FindFirstChild("MainGUI"):FindFirstChild("Frame"):FindFirstChild("HolderFrame"):FindFirstChild("Frame"):FindFirstChild("ScrollFrameMain"):FindFirstChild("ScrollingFrame"):FindFirstChild("Frame"))
+		end)
 	end
 end
 
