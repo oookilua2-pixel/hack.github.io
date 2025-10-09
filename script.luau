@@ -29,6 +29,15 @@ local I = 0
 
 local tweenInfo = TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut)
 
+-- Player Movement --
+local NoClip
+
+local WalkSpeed = nil
+local JumpHight = nil
+
+local Fly = false
+-- End Movement
+
 local TemplatesTabel = {
 	["1_Num"] = {
 		Image = "rbxassetid://121360723582316",
@@ -111,20 +120,67 @@ local TemplatesTabel = {
 	}
 }
 
-local function CreateButton(Type,Text,Layorder, Parent)
-	if Type == "ButtonSlider" then
+local function ToggleNoClip()
+	NoClip = not NoClip
+end
+
+local function CreateButton(Type,Text,Layorder, Parent,Name)
+	if Type == "SliderButton" then
 		
 	elseif Type == "Button" then
+		local Button = Instance.new("TextButton")
+		Button.Parent = Parent
+		Button.Text = ""
+		Button.BackgroundColor3 = Color3.fromRGB(9,9,9)
+		Button.Visible = true
+		Button.Name = Name
+		Button.LayoutOrder = Layorder
 		
-	elseif Type == "Text" then
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Button
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.025,0)
+		UICorner.Parent = Button
+		
 		local Textlabel = Instance.new("TextLabel")
-		Textlabel.Parent = Parent
+		Textlabel.Parent = Button
 		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.BackgroundTransparency = 1
 		Textlabel.Text = Text
 		Textlabel.Font = Enum.Font.FredokaOne
 		Textlabel.TextScaled = true
 		Textlabel.Visible = true
 		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = "Text_"..Layorder
+		Textlabel.Position = UDim2.new(0.5,0,0.5,0)
+		Textlabel.AnchorPoint = Vector2.new(0.5,0.5)
+		Textlabel.ZIndex = 2
+		Textlabel.Size = UDim2.new(0.9,0,0.9,0)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+	elseif Type == "Text" then
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Parent
+		Textlabel.BackgroundColor3 = Color3.fromRGB(7, 7, 7)
+		Textlabel.Text = Text
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = Name
+		Textlabel.LayoutOrder = Layorder
+		Textlabel.BackgroundTransparency = 0
+		Textlabel.RichText = true
 		
 		local UIStroke = Instance.new("UIStroke")
 		UIStroke.Parent = Textlabel
@@ -144,7 +200,105 @@ local function CreateButton(Type,Text,Layorder, Parent)
 		UICorner.CornerRadius = UDim.new(0.025,0)
 		UICorner.Parent = Textlabel
 	elseif Type == "ToggleButton" then
+		local Frame = Instance.new("Frame")
+		Frame.Parent = Parent
+		Frame.BackgroundColor3 = Color3.fromRGB(9,9,9)
+		Frame.Visible = true
+		Frame.Name = "Frame_"..Name
+		Frame.LayoutOrder = Layorder
 		
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.025,0)
+		UICorner.Parent = Frame
+	
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Frame
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Frame
+		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.Text = Text
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = "TextLabel"
+		Textlabel.BackgroundTransparency = 1
+		Textlabel.ZIndex = 2
+		Textlabel.Size = UDim2.new(0.65,0,0.9,0)
+		Textlabel.LayoutOrder = -999
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+
+		local Button = Instance.new("TextButton")
+		Button.Parent = Frame
+		Button.Text = ""
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Button.Visible = true
+		Button.Size = UDim2.new(0.25,0,0.75,0)
+		Button.Name = Name
+		Button.LayoutOrder = 999
+		
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.2,0)
+		UICorner.Parent = Button
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Button
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Button
+		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.Text = "OFF"
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = "TextLabel"
+		Textlabel.LayoutOrder = Layorder
+		Textlabel.BackgroundTransparency = 1
+		Textlabel.ZIndex = 2
+		Textlabel.Size = UDim2.new(0.9,0,0.9,0)
+		Textlabel.Position = UDim2.new(0.5,0,0.5,0)
+		Textlabel.AnchorPoint = Vector2.new(0.5,0.5)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 2
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+
+		local UIListLayout_Hold = Instance.new("UIListLayout")
+		UIListLayout_Hold.Parent = Frame
+		UIListLayout_Hold.Padding = UDim.new(0.05, 0)
+		UIListLayout_Hold.FillDirection = Enum.FillDirection.Horizontal
+		UIListLayout_Hold.SortOrder = Enum.SortOrder.LayoutOrder
+		UIListLayout_Hold.Wraps = false
+		UIListLayout_Hold.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		UIListLayout_Hold.HorizontalFlex = Enum.UIFlexAlignment.None
+		UIListLayout_Hold.ItemLineAlignment = Enum.ItemLineAlignment.Automatic
+		UIListLayout_Hold.VerticalAlignment = Enum.VerticalAlignment.Center
+		UIListLayout_Hold.VerticalFlex = Enum.UIFlexAlignment.None
+		
+		Button.MouseButton1Click:Connect(function()
+			if Button.Name == "NoClip" then
+				ToggleNoClip()
+			end 
+		end)
 	end
 end
 
@@ -159,7 +313,8 @@ end
 local function SetCatagory(Name,Parent)
 	ClearCatagory(Parent)
 	if Name == "PlayerButton" then
-		CreateButton("Text","I Love Pizza", 1, Parent)
+		CreateButton("Text","⚡ Movement Player ⚡", 1, Parent,"Title")
+		CreateButton("ToggleButton","NoClip:",2, Parent,"NoClip")
 	end
 end
 
@@ -630,7 +785,7 @@ local function CreateLoadingScreen()
 	Title_Precent.Size = UDim2.new(0.4,0,0.4,0)
 	Title_Precent.Font = Enum.Font.FredokaOne
 	Title_Precent.RichText = false
-	Title_Precent.Text = "100%"
+	Title_Precent.Text = "0%"
 	Title_Precent.TextColor3 = Color3.fromRGB(255,179,0)
 	Title_Precent.TextScaled = true
 	Title_Precent.TextWrapped = true
@@ -745,6 +900,14 @@ local function StartScript()
 	tween_precent_text_UI_Stroke:Play()
 	StartPercentage()
 end
+
+game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("Head").Touched:Connect(function(Part)
+	if NoClip then
+		Part.CanCollide = false
+	elseif not NoClip then
+		Part.CanCollide = true
+	end
+end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
