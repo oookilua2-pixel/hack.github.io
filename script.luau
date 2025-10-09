@@ -3,6 +3,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local PhysicsService = game:GetService("PhysicsService")
 
 local gradient = nil
 
@@ -30,7 +31,7 @@ local I = 0
 local tweenInfo = TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut)
 
 -- Player Movement --
-local NoClip
+local NoClip = false
 
 local WalkSpeed = nil
 local JumpHight = nil
@@ -120,8 +121,28 @@ local TemplatesTabel = {
 	}
 }
 
-local function ToggleNoClip()
+local function onTouched(part)
+	if not part:IsA("BasePart") then return end
+	if not part.Anchored then return end
+	if not player.Character then return end
+
+	local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	if part.Position.Y < (hrp.Position.Y - hrp.Size.Y) then return end
+
+	part.CanCollide = not NoClip
+end
+
+local function ToggleNoClip(Button,Text)
 	NoClip = not NoClip
+	if NoClip then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not NoClip then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
 end
 
 local function CreateButton(Type,Text,Layorder, Parent,Name)
@@ -296,7 +317,7 @@ local function CreateButton(Type,Text,Layorder, Parent,Name)
 		
 		Button.MouseButton1Click:Connect(function()
 			if Button.Name == "NoClip" then
-				ToggleNoClip()
+				ToggleNoClip(Button,Textlabel)
 			end 
 		end)
 	end
@@ -886,7 +907,6 @@ local function StartScript()
 	CreateLoadingScreen()
 
 	task.wait(1)
-
 	SetSettings("Start")
 	
 	local tween = TweenService:Create(driver, tweenInfo, {Value = 1})
@@ -900,14 +920,6 @@ local function StartScript()
 	tween_precent_text_UI_Stroke:Play()
 	StartPercentage()
 end
-
-game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("Head").Touched:Connect(function(Part)
-	if NoClip then
-		Part.CanCollide = false
-	elseif not NoClip then
-		Part.CanCollide = true
-	end
-end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
@@ -938,5 +950,7 @@ RunService.RenderStepped:Connect(function()
 		camera.CFrame = CFrame.new(camPos) * CFrame.fromMatrix(Vector3.zero, savedCameraCFrame.RightVector, savedCameraCFrame.UpVector)
 	end
 end)
+
+game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("HumanoidRootPart").Touched:Connect(onTouched)
 
 StartScript()
