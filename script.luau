@@ -4,9 +4,9 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local PhysicsService = game:GetService("PhysicsService")
+local Mouse = Players.LocalPlayer:GetMouse()
 
 local gradient = nil
-
 local player = Players.LocalPlayer
 
 local PlayerGUI = player:WaitForChild("PlayerGui")
@@ -30,14 +30,23 @@ local I = 0
 
 local tweenInfo = TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut)
 
--- Player Movement --
 local NoClip = false
 
-local WalkSpeed = nil
-local JumpHight = nil
+local WalkSpeedNIL = false
+local JumpHightNIL = false
+
+local WalkSpeedDefault = game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("Humanoid").WalkSpeed
+local JumpHightDefault = game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("Humanoid").JumpHeight
+
+local WalkSpeed = 0
+local JumpHight = 0
 
 local Fly = false
--- End Movement
+
+local IsOnASlider = false
+
+local MaxValue = 0.7 or 70/100
+local StartingValue = 0.4 or 40/100
 
 local TemplatesTabel = {
 	["1_Num"] = {
@@ -121,6 +130,27 @@ local TemplatesTabel = {
 	}
 }
 
+local TweenInfo_Slider = TweenInfo.new(0.5,Enum.EasingStyle.Exponential)
+
+local function DoMovementFaster()
+	local Character = game.Players.LocalPlayer.Character
+	if not Character then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
+	local Humanoid = Character:FindFirstChild("Humanoid")
+	if not Humanoid then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
+	
+	if WalkSpeedNIL == true then
+		Humanoid.WalkSpeed = WalkSpeed
+	elseif WalkSpeedNIL == false then
+		Humanoid.WalkSpeed = WalkSpeedDefault
+	end
+	if JumpHightNIL == true then
+		Humanoid.JumpHeight = JumpHight
+		print("Work")
+	elseif JumpHightNIL == false then
+		Humanoid.JumpHeight = JumpHightDefault
+	end
+end
+
 local function onTouched(part)
 	if not part:IsA("BasePart") then return end
 	if not part.Anchored then return end
@@ -145,8 +175,211 @@ local function ToggleNoClip(Button,Text)
 	end
 end
 
+local function ToggleWalkSpeed(Button,Text)
+	WalkSpeedNIL = not WalkSpeedNIL
+	if WalkSpeedNIL then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not WalkSpeedNIL then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
+local function ToggleJumpHight(Button,Text)
+	JumpHightNIL = not JumpHightNIL
+	if JumpHightNIL then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not JumpHightNIL then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
+local function UpdateSlider(Slider,OutPutValue,Fill,OutputText)
+	local output = math.clamp(((Vector2.new(Mouse.X,Mouse.Y)-Slider.AbsolutePosition)/Slider.AbsoluteSize).X,0,1)
+	
+	local outputClamped = StartingValue + (output*(MaxValue-StartingValue))
+	
+	if OutPutValue.Value ~= outputClamped then
+		TweenService:Create(Fill,TweenInfo_Slider,{Size = UDim2.fromScale(output,1)}):Play()
+	end
+	
+	OutPutValue.Value = outputClamped
+	OutputText.Text = tostring(math.round(Fill.Size.X.Scale*100))
+end
+
 local function CreateButton(Type,Text,Layorder, Parent,Name)
-	if Type == "SliderButton" then
+	if Type == "Space" then
+		local Frame = Instance.new("Frame")
+		Frame.Parent = Parent
+		Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		Frame.BackgroundTransparency = 1
+		Frame.LayoutOrder = Layorder
+		Frame.Name = Name
+		Frame.Size = UDim2.new(0,0,0,0)
+		
+	elseif Type == "SliderButton" then
+		local Frame_Main = Instance.new("Frame")
+		Frame_Main.Parent = Parent
+		Frame_Main.BackgroundColor3 = Color3.fromRGB(9,9,9)
+		Frame_Main.Visible = true
+		Frame_Main.Name = "Frame_"..Name
+		Frame_Main.LayoutOrder = Layorder
+		Frame_Main.Size = UDim2.new(0.8,0,0.07,0)
+
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Frame_Main
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.025,0)
+		UICorner.Parent = Frame_Main
+		
+		local UIListLayout_Hold = Instance.new("UIListLayout")
+		UIListLayout_Hold.Parent = Frame_Main
+		UIListLayout_Hold.Padding = UDim.new(0.05, 0)
+		UIListLayout_Hold.FillDirection = Enum.FillDirection.Horizontal
+		UIListLayout_Hold.SortOrder = Enum.SortOrder.LayoutOrder
+		UIListLayout_Hold.Wraps = false
+		UIListLayout_Hold.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		UIListLayout_Hold.HorizontalFlex = Enum.UIFlexAlignment.None
+		UIListLayout_Hold.ItemLineAlignment = Enum.ItemLineAlignment.Automatic
+		UIListLayout_Hold.VerticalAlignment = Enum.VerticalAlignment.Center
+		UIListLayout_Hold.VerticalFlex = Enum.UIFlexAlignment.None
+		
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Frame_Main
+		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.BackgroundTransparency = 1
+		Textlabel.Text = Text
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = "Text_"..Layorder
+		Textlabel.Position = UDim2.new(0.5,0,0.5,0)
+		Textlabel.AnchorPoint = Vector2.new(0.5,0.5)
+		Textlabel.ZIndex = 2
+		Textlabel.Size = UDim2.new(0.5,0,0.9,0)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local Frame = Instance.new("Frame")
+		Frame.Parent = Frame_Main
+		Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+		Frame.Visible = true
+		Frame.Name = "FrameSlider"
+		Frame.LayoutOrder = Layorder
+		Frame.Size = UDim2.new(0.425,0,0.8,0)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Frame
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local Frame_BackGround = Instance.new("Frame")
+		Frame_BackGround.Parent = Frame
+		Frame_BackGround.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
+		Frame_BackGround.Visible = true
+		Frame_BackGround.Name = "Fill"
+		Frame_BackGround.LayoutOrder = 0
+		Frame_BackGround.Size = UDim2.new(1,0,1,0)
+		
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Frame_BackGround
+		UIStroke.Thickness = 3
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Frame
+		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.BackgroundTransparency = 1
+		Textlabel.Text = Text
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = "Label"
+		Textlabel.Position = UDim2.new(0.5,0,0.5,0)
+		Textlabel.AnchorPoint = Vector2.new(0.5,0.5)
+		Textlabel.ZIndex = 100
+		Textlabel.Size = UDim2.new(0.9,0,0.9,0)
+		Textlabel.Selectable = false
+		Textlabel.Interactable = false
+
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 2
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+		
+		local TextButton = Instance.new("TextButton")
+		TextButton.Parent = Frame
+		TextButton.Text = ""
+		TextButton.Size = UDim2.new(1,0,1,0)
+		TextButton.Position = UDim2.new(0.5,0,0.5,0)
+		TextButton.ZIndex = 2
+		TextButton.BackgroundTransparency = 1
+		TextButton.BorderSizePixel = 0
+		TextButton.AutoButtonColor = false
+		TextButton.AnchorPoint = Vector2.new(0.5,0.5)
+		TextButton.Name = "Trigger"
+		
+		local OutputValue = Instance.new("NumberValue")
+		OutputValue.Parent = Frame
+		OutputValue.Name = "OutputValue"
+		OutputValue.Value = 0
+		
+		Frame_BackGround.Size = UDim2.fromScale(OutputValue.Value,1)
+		Textlabel.Text = tostring(math.round(OutputValue.Value*100))
+		
+		if OutputValue.Value <= 0.40 then Frame_BackGround:FindFirstChild("UIStroke").Thickness = 0 Frame_BackGround.BackgroundTransparency = 1 elseif OutputValue.Value >= 0.40 then Frame_BackGround:FindFirstChild("UIStroke").Thickness = 2 Frame_BackGround.BackgroundTransparency = 0 end
+		
+		local RealNumber = 0
+		
+		TextButton.MouseButton1Down:Connect(function()
+			IsOnASlider = true
+			while IsOnASlider do
+				task.wait()
+				UpdateSlider(Frame,OutputValue,Frame_BackGround,TextButton)
+			end
+		end)
+		
+		UserInputService.InputChanged:Connect(function()
+			if Name == "WalkSpeed" then
+				print("WalkSpeed Switch to ... "..math.round(Frame_BackGround.Size.X.Scale*100))
+				WalkSpeed = math.round(Frame_BackGround.Size.X.Scale*100)
+			elseif Name == "JumpHight" then
+				print("JumpHight Switch to ... "..math.round(Frame_BackGround.Size.X.Scale*100))
+				JumpHight = math.round(Frame_BackGround.Size.X.Scale*100)
+			end
+		end)
+		
+		Frame_BackGround:GetPropertyChangedSignal("Size"):Connect(function()
+			Textlabel.Text = tostring(math.round(Frame_BackGround.Size.X.Scale*100))
+			if OutputValue.Value <= 0.40 then
+				Frame_BackGround:FindFirstChild("UIStroke").Thickness = 0
+				Frame_BackGround.BackgroundTransparency = 1
+			elseif OutputValue.Value >= 0.40 then
+				Frame_BackGround:FindFirstChild("UIStroke").Thickness = 2
+				Frame_BackGround.BackgroundTransparency = 0
+			end
+		end)
 		
 	elseif Type == "Button" then
 		local Button = Instance.new("TextButton")
@@ -156,6 +389,7 @@ local function CreateButton(Type,Text,Layorder, Parent,Name)
 		Button.Visible = true
 		Button.Name = Name
 		Button.LayoutOrder = Layorder
+		Button.Size = UDim2.new(0.8,0,0.07,0)
 		
 		local UIStroke = Instance.new("UIStroke")
 		UIStroke.Parent = Button
@@ -202,6 +436,7 @@ local function CreateButton(Type,Text,Layorder, Parent,Name)
 		Textlabel.LayoutOrder = Layorder
 		Textlabel.BackgroundTransparency = 0
 		Textlabel.RichText = true
+		Textlabel.Size = UDim2.new(0.8,0,0.07,0)
 		
 		local UIStroke = Instance.new("UIStroke")
 		UIStroke.Parent = Textlabel
@@ -227,6 +462,7 @@ local function CreateButton(Type,Text,Layorder, Parent,Name)
 		Frame.Visible = true
 		Frame.Name = "Frame_"..Name
 		Frame.LayoutOrder = Layorder
+		Frame.Size = UDim2.new(0.8,0,0.07,0)
 		
 		local UICorner = Instance.new("UICorner")
 		UICorner.CornerRadius = UDim.new(0.025,0)
@@ -318,6 +554,10 @@ local function CreateButton(Type,Text,Layorder, Parent,Name)
 		Button.MouseButton1Click:Connect(function()
 			if Button.Name == "NoClip" then
 				ToggleNoClip(Button,Textlabel)
+			elseif Button.Name == "WalkSpeedChange" then
+				ToggleWalkSpeed(Button,Textlabel)
+			elseif Button.Name == "JumpHightChange" then
+				ToggleJumpHight(Button,Textlabel)
 			end 
 		end)
 	end
@@ -325,7 +565,7 @@ end
 
 local function ClearCatagory(Cat)
 	for i,v in pairs(Cat:GetChildren()) do
-		if not v:IsA("UIGridLayout") then
+		if not v:IsA("UIListLayout") then
 			v:Destroy()
 		end	
 	end
@@ -335,7 +575,19 @@ local function SetCatagory(Name,Parent)
 	ClearCatagory(Parent)
 	if Name == "PlayerButton" then
 		CreateButton("Text","⚡ Movement Player ⚡", 1, Parent,"Title")
-		CreateButton("ToggleButton","NoClip:",2, Parent,"NoClip")
+		
+		CreateButton("SliderButton","WalkSpeed:",2, Parent,"WalkSpeed")
+		CreateButton("ToggleButton","Speed:",3, Parent,"WalkSpeedChange")
+		
+		CreateButton("Space","💪 Powers 💪",4, Parent,"Title")
+		
+		CreateButton("SliderButton","JumpHight:",5, Parent,"JumpHight")
+		CreateButton("ToggleButton","Jump:",6, Parent,"JumpHightChange")
+		
+		CreateButton("Space","💪 Powers 💪",7, Parent,"Title")
+		
+		CreateButton("Text","💪 Powers 💪",8, Parent,"Title")
+		CreateButton("ToggleButton","NoClip:",9, Parent,"NoClip")
 	end
 end
 
@@ -526,14 +778,19 @@ local function CreateGUI()
 	ScrollFrame_Frame.BackgroundTransparency = 1
 	ScrollFrame_Frame.LayoutOrder = 0
 	
-	local UIGridLayout = Instance.new("UIGridLayout")
-	UIGridLayout.Parent = ScrollFrame_Frame
-	UIGridLayout.CellPadding = UDim2.new(0,0,0.017,0)
-	UIGridLayout.CellSize = UDim2.new(0.8,0,0.07,0)
-	UIGridLayout.FillDirection = Enum.FillDirection.Vertical
-	UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	UIGridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-	UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	print(ScrollFrame_Frame)
+	
+	local UIListLayout_Template = Instance.new("UIListLayout")
+	UIListLayout_Template.Parent = ScrollFrame_Frame
+	UIListLayout_Template.Padding = UDim.new(0.015, 0)
+	UIListLayout_Template.FillDirection = Enum.FillDirection.Vertical
+	UIListLayout_Template.SortOrder = Enum.SortOrder.LayoutOrder
+	UIListLayout_Template.Wraps = false
+	UIListLayout_Template.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	UIListLayout_Template.HorizontalFlex = Enum.UIFlexAlignment.None
+	UIListLayout_Template.ItemLineAlignment = Enum.ItemLineAlignment.Automatic
+	UIListLayout_Template.VerticalAlignment = Enum.VerticalAlignment.Top
+	UIListLayout_Template.VerticalFlex = Enum.UIFlexAlignment.None
 
 	local Title_HolderFrame = Instance.new("TextLabel")
 	Title_HolderFrame.Parent = HolderFrame
@@ -906,7 +1163,7 @@ local function StartScript()
 	print("Started")
 	CreateLoadingScreen()
 
-	task.wait(1)
+	task.wait(0)
 	SetSettings("Start")
 	
 	local tween = TweenService:Create(driver, tweenInfo, {Value = 1})
@@ -920,17 +1177,6 @@ local function StartScript()
 	tween_precent_text_UI_Stroke:Play()
 	StartPercentage()
 end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	
-	if input.KeyCode == toggleKey then
-		toggleMouse()
-		if PlayerGUI:FindFirstChild("MainGUI") then
-			PlayerGUI.MainGUI.Enabled = not PlayerGUI.MainGUI.Enabled
-		end
-	end
-end)
 
 driver:GetPropertyChangedSignal("Value"):Connect(function()
 	local t = driver.Value
@@ -951,6 +1197,27 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
+RunService.RenderStepped:Connect(function()
+	DoMovementFaster()
+end)
+
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("HumanoidRootPart").Touched:Connect(onTouched)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		IsOnASlider = false
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+
+	if input.KeyCode == toggleKey then
+		toggleMouse()
+		if PlayerGUI:FindFirstChild("MainGUI") then
+			PlayerGUI.MainGUI.Enabled = not PlayerGUI.MainGUI.Enabled
+		end
+	end
+end)
 
 StartScript()
