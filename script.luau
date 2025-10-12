@@ -61,6 +61,8 @@ local IsHeld = false
 local MaxValue = 0.7 or 70/100
 local StartingValue = 0.4 or 40/100
 
+local CanSafeExplode = true
+
 local SlidersMax =  {
 	["WalkSpeed"] = {
 		Max = 1000,
@@ -203,7 +205,7 @@ local function onJumpRequest()
 	end
 end
 
-local function DoAntiesGrabs()
+local function DoAntiGrab()
 	local Character = game.Players.LocalPlayer.Character
 	if not Character then return end
 	local Humanoid = Character:FindFirstChild("Humanoid")
@@ -213,18 +215,43 @@ local function DoAntiesGrabs()
 	
 	local Character_Head = Character.Head
 	local PartOwner = Character_Head:FindFirstChild("PartOwner")
-	if PartOwner then
-		local ReplicatedStorage = game:GetService("ReplicatedStorage")
-		local CharacterEvents = ReplicatedStorage:WaitForChild("CharacterEvents")
-		local Struggle = CharacterEvents:WaitForChild("Struggle")
-		
-		Struggle:FireServer()
-		ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
+	if AntiGrab then
+		if PartOwner then
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			local CharacterEvents = ReplicatedStorage:WaitForChild("CharacterEvents")
+			local Struggle = CharacterEvents:WaitForChild("Struggle")
+			
+			Struggle:FireServer()
+			ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
+		end
+		if IsHeld then
+			RootPart.Anchored = true
+		elseif not IsHeld then
+			RootPart.Anchored = false
+		end
 	end
-	if IsHeld then
-		RootPart.Anchored = true
-	elseif not IsHeld then
-		RootPart.Anchored = false
+end
+
+local function DoAntiExplosive()	
+	local Ragdolled = player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled")
+	if Ragdolled then
+		Ragdolled:GetPropertyChangedSignal("Value"):Connect(function()
+			if Ragdolled.Value then
+				CanSafeExplode = false
+				for Number, Objects in ipairs(player.Character:GetChildren()) do
+					if Objects:IsA("BasePart") then
+						Objects.Anchored = true
+					end
+				end	
+			else
+				CanSafeExplode = true
+				for Number, Objects in ipairs(player.Character:GetChildren()) do
+					if Objects:IsA("BasePart") then
+						Objects.Anchored = false
+					end
+				end
+			end
+		end)
 	end
 end
 
@@ -1307,7 +1334,10 @@ end)
 
 RunService.RenderStepped:Connect(function()
 	DoMovementFaster()
-	DoAntiesGrabs()
+	DoAntiGrab()
+	if CanSafeExplode then
+		DoAntiExplosive()
+	end
 end)
 
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("HumanoidRootPart").Touched:Connect(onTouched)
