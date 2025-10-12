@@ -56,6 +56,8 @@ local AntiFire = false
 local AntiPoison = false
 local AntiLag = false
 
+local IsHeld = false
+
 local MaxValue = 0.7 or 70/100
 local StartingValue = 0.4 or 40/100
 
@@ -198,6 +200,31 @@ local function onJumpRequest()
 			task.wait(0.05)
 			canJump = true
 		end
+	end
+end
+
+local function DoAntiesGrabs()
+	local Character = game.Players.LocalPlayer.Character
+	if not Character then return end
+	local Humanoid = Character:FindFirstChild("Humanoid")
+	if not Humanoid then return end
+	local RootPart = Character:FindFirstChild("HumanoidRootPart")
+	if not RootPart then return end
+	
+	local Character_Head = Character.Head
+	local PartOwner = Character_Head:FindFirstChild("PartOwner")
+	if PartOwner then
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local CharacterEvents = ReplicatedStorage:WaitForChild("CharacterEvents")
+		local Struggle = CharacterEvents:WaitForChild("Struggle")
+		
+		Struggle:FireServer()
+		ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
+	end
+	if IsHeld then
+		RootPart.Anchored = true
+	elseif not IsHeld then
+		RootPart.Anchored = false
 	end
 end
 
@@ -1280,10 +1307,29 @@ end)
 
 RunService.RenderStepped:Connect(function()
 	DoMovementFaster()
+	DoAntiesGrabs()
 end)
 
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("HumanoidRootPart").Touched:Connect(onTouched)
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("Humanoid").Seated:Connect(onSeated)
+
+if game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld") then
+	game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld"):GetPropertyChangedSignal("Value"):Connect(function() 
+		if game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld").Value == true then
+			IsHeld = true
+			print("Player is Held") 
+		elseif game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld").Value == false then
+			IsHeld = false
+			print("Player is Not Held") 
+		end
+	end)
+end
+
+game.Players.LocalPlayer.Character:WaitForChild("Humanoid").Died:Connect(function()
+	Shifting = false
+	print("Dead")
+end)
+
 game:GetService("UserInputService").JumpRequest:Connect(onJumpRequest)
 
 UserInputService.InputEnded:Connect(function(input)
