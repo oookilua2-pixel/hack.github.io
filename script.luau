@@ -1456,9 +1456,7 @@ UserInputService.InputBegan:Connect(function(input)
 	if WalkSpeedNIL then
 		if input.KeyCode == Enum.KeyCode.LeftControl then
 			print("Shifting")
-			if not IsHeld then
-				Shifting = not Shifting
-			end
+			Shifting = not Shifting
 		end
 	end
 end)
