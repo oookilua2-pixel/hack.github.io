@@ -27,6 +27,7 @@ local driver = Instance.new("NumberValue")
 driver.Value = 0
 
 local I = 0
+local Y_Void = -20
 local Layorder_v = 0
 
 local tweenInfo = TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut)
@@ -894,6 +895,36 @@ local function SetSettings(Type)
 	end	
 end
 
+local function CreateZeroPoint()
+	local ZeroPoint = Instance.new("Part")
+	ZeroPoint.Parent = workspace
+	ZeroPoint.Size = Vector3.new(1,1,1)
+	ZeroPoint.Position = Vector3.new(0,20,0)
+	ZeroPoint.Anchored = true
+	ZeroPoint.Color = Color3.new(1, 0, 0)
+	ZeroPoint.CanCollide = false
+	ZeroPoint.Transparency = 0.5
+	ZeroPoint.Name = "ZeroPoint"
+end
+
+local function VoidPart()
+	local Void = Instance.new("Part")
+	Void.Parent = workspace
+	Void.Anchored = true
+	Void.CanCollide = false
+	Void.Transparency = 0
+	Void.Material = Enum.Material.SmoothPlastic
+	Void.Size = Vector3.new(10000, 1, 10000)
+	Void.CFrame = CFrame.new(0, Y_Void, 0)
+
+	Void.Touched:Connect(function(Part)
+		if Part.Name == "HumanoidRootPart" then
+			local HumanoidRootPart = Part
+			if HumanoidRootPart.Parent:IsA("Model") then HumanoidRootPart.Parent:MoveTo(workspace:FindFirstChild("ZeroPoint").Position) elseif not HumanoidRootPart.Parent:IsA("Model") then return end
+		end
+	end)
+end
+
 local function CreateGUI()
 	if PlayerGUI:FindFirstChild("MainGUI") then
 		PlayerGUI:FindFirstChild("MainGUI"):Destroy()
@@ -1444,6 +1475,8 @@ end
 
 local function StartScript()
 	print("Started")
+	CreateZeroPoint()
+	VoidPart()
 	CreateLoadingScreen()
 
 	task.wait(0)
