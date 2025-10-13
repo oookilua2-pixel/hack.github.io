@@ -63,12 +63,6 @@ local StartingValue = 0.4 or 40/100
 
 local CanSafeExplode = true
 
-local SlidersMax =  {
-	["WalkSpeed"] = {
-		Max = 1000,
-	}
-}
-
 local TemplatesTabel = {
 	["1_Num"] = {
 		Image = "rbxassetid://121360723582316",
@@ -151,24 +145,36 @@ local TemplatesTabel = {
 	}
 }
 
+local SlidersMax =  {
+	["WalkSpeed"] = {
+		Max = 1000,
+	}
+}
+
 local TweenInfo_Slider = TweenInfo.new(0.5,Enum.EasingStyle.Exponential)
 
-local function ToggleAntiGrab(Button,Text)
-	AntiGrab = not AntiGrab
-	if AntiGrab then
-		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
-		Text.Text = "ON"
-	elseif not AntiGrab then
-		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
-		Text.Text = "OFF"
-	end
+local function DeleteDrop(NameOfThing)
+	local RS = game:GetService("ReplicatedStorage")
+	
+	RS.MenuToys.DestroyToy:FireServer(workspace.eawheehwaSpawnedInToys:GetChildren()[#workspace.eawheehwaSpawnedInToys:GetChildren()])
+end
+
+local function SpawnDrop(NameOfThing, Position, Rotation) -- 1. Name of object -- 2. Position use Vector3.new -- 3. pls use Vector3.new() or else the will crash --  
+	local RS = game:GetService("ReplicatedStorage")
+	task.spawn(function()
+		local Position_Set = CFrame.new(Position)
+		local Rotation_Set = Vector3.new(-100,0,0)
+		RS.MenuToys.SpawnToyRemoteFunction:InvokeServer(NameOfThing, Position_Set, Rotation_Set)
+	end)
+	task.wait(0.4)
+	DeleteDrop(NameOfThing)
 end
 
 local function DoMovementFaster()
 	local Character = game.Players.LocalPlayer.Character
-	if not Character then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
+	--if not Character then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
 	local Humanoid = Character:FindFirstChild("Humanoid") 
-	if not Humanoid then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
+--	if not Humanoid then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
 
 	if WalkSpeedNIL == true and Shifting then
 		Humanoid.WalkSpeed = WalkSpeed
@@ -205,6 +211,25 @@ local function onJumpRequest()
 	end
 end
 
+local function DoAntiFire()
+	local Character = game.Players.LocalPlayer.Character
+	if not Character then return end
+	local RootPart = Character:FindFirstChild("HumanoidRootPart")
+	if not RootPart then return end
+	local FirePlayerPart = RootPart:FindFirstChild("FirePlayerPart")
+	if not FirePlayerPart then return end
+	local CanBurn = FirePlayerPart:FindFirstChild("CanBurn")
+	
+	if AntiFire then
+		if CanBurn.Value then
+			warn("Player is on fire")
+			SpawnDrop("FireExtinguisher", Vector3.new(RootPart.Position.X,RootPart.Position.Y + 4,RootPart.Position.Z + 22))
+		elseif not CanBurn.Value then
+			warn("Player is not on fire")
+		end
+	end
+end
+
 local function DoAntiGrab()
 	local Character = game.Players.LocalPlayer.Character
 	if not Character then return end
@@ -235,23 +260,22 @@ end
 local function DoAntiExplosive()	
 	local Ragdolled = player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled")
 	if Ragdolled then
-		Ragdolled:GetPropertyChangedSignal("Value"):Connect(function()
-			if Ragdolled.Value then
-				CanSafeExplode = false
-				for Number, Objects in ipairs(player.Character:GetChildren()) do
-					if Objects:IsA("BasePart") then
-						Objects.Anchored = true
-					end
-				end	
-			else
-				CanSafeExplode = true
-				for Number, Objects in ipairs(player.Character:GetChildren()) do
-					if Objects:IsA("BasePart") then
-						Objects.Anchored = false
-					end
+		if Ragdolled.Value then
+			for Number, Objects in ipairs(player.Character:GetChildren()) do
+				if Objects:IsA("BasePart") then
+					Objects.Anchored = true
+				end
+			end	
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
+		else
+			CanSafeExplode = true
+			for Number, Objects in ipairs(player.Character:GetChildren()) do
+				if Objects:IsA("BasePart") then
+					Objects.Anchored = false
 				end
 			end
-		end)
+		end
 	end
 end
 
@@ -266,6 +290,39 @@ local function onTouched(part)
 	if part.Position.Y < (hrp.Position.Y - hrp.Size.Y) then return end
 
 	part.CanCollide = not NoClip
+end
+
+local function ToggleAntiExplosive(Button,Text)
+	AntiExplode = not AntiExplode
+	if AntiExplode then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiExplode then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
+local function ToggleAntiFire(Button,Text)
+	AntiFire = not AntiFire
+	if AntiFire then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiFire then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
+local function ToggleAntiGrab(Button,Text)
+	AntiGrab = not AntiGrab
+	if AntiGrab then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiGrab then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
 end
 
 local function ToggleNoClip(Button,Text)
@@ -680,6 +737,10 @@ local function CreateButton(Type,Text,Parent,Name)
 				ToggleInfintyJumping(Button,Textlabel)
 			elseif Button.Name == "AntiGrabChange" then
 				ToggleAntiGrab(Button,Textlabel)
+			elseif Button.Name == "AntiExplodeChange" then
+				ToggleAntiExplosive(Button,Textlabel)
+			elseif Button.Name == "AntiFireChange" then
+				ToggleAntiFire(Button,Textlabel)
 			end 
 		end)
 	end
@@ -718,10 +779,16 @@ local function SetCatagory(Name,Parent,Scrolling)
 
 		CreateButton("ToggleButton","Anti Grab:", Parent,"AntiGrabChange")
 		CreateButton("ToggleButton","Anti Explode:", Parent,"AntiExplodeChange")
-		CreateButton("ToggleButton","Anti Kick:", Parent,"AntiKickChange")
 		CreateButton("ToggleButton","Anti Fire:", Parent,"AntiFireChange")
 		CreateButton("ToggleButton","Anti Poison:", Parent,"AntiPoisonChange")
 		CreateButton("ToggleButton","Anti Lag:", Parent,"AntiLagChange")
+		CreateButton("ToggleButton","Anti Void:", Parent,"AntiVoidChange")
+		CreateButton("ToggleButton","Anti Kick:", Parent,"AntiKickChange")
+		
+		CreateButton("Space","SpaceBetwin", Parent,"Space")
+		
+		CreateButton("Text","if grabed torment way", Parent,"Title")
+		CreateButton("ToggleButton","torment:", Parent,"torment")
 	end
 end
 
@@ -1335,9 +1402,7 @@ end)
 RunService.RenderStepped:Connect(function()
 	DoMovementFaster()
 	DoAntiGrab()
-	if CanSafeExplode then
-		DoAntiExplosive()
-	end
+	DoAntiFire()
 end)
 
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("HumanoidRootPart").Touched:Connect(onTouched)
@@ -1361,6 +1426,14 @@ game.Players.LocalPlayer.Character:WaitForChild("Humanoid").Died:Connect(functio
 end)
 
 game:GetService("UserInputService").JumpRequest:Connect(onJumpRequest)
+
+if player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled") then
+	player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled"):GetPropertyChangedSignal("Value"):Connect(function()
+		if AntiExplode then
+			DoAntiExplosive()
+		end
+	end)
+end
 
 UserInputService.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
