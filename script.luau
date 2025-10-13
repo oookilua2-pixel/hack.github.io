@@ -53,7 +53,7 @@ local AntiGrab = false
 local AntiExplode = false
 local AntiKick = false
 local AntiFire = false
-local AntiPoison = false
+local AntiFling = false
 local AntiLag = false
 
 local IsHeld = false
@@ -211,6 +211,20 @@ local function onJumpRequest()
 	end
 end
 
+local function DoAntiFling()
+	local Ragdolled = player.Character:FindFirstChild("Humanoid"):FindFirstChild("Ragdolled")
+	local LastTimeGround
+	
+	if Ragdolled.Value == false then
+		LastTimeGround = player.Character:FindFirstChild("HumanoidRootPart").Position
+	end
+	
+	if Ragdolled.Value == true then
+		warn("Player is ragdolled")
+		player.Character:FindFirstChild("HumanoidRootPart").Position = LastTimeGround
+	end
+end
+
 local function DoAntiFire()
 	local Character = game.Players.LocalPlayer.Character
 	if not Character then return end
@@ -290,6 +304,17 @@ local function onTouched(part)
 	if part.Position.Y < (hrp.Position.Y - hrp.Size.Y) then return end
 
 	part.CanCollide = not NoClip
+end
+
+local function ToggleAntiFling(Button,Text)
+	AntiFling = not AntiFling
+	if AntiFling then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiFling then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
 end
 
 local function ToggleAntiExplosive(Button,Text)
@@ -741,6 +766,8 @@ local function CreateButton(Type,Text,Parent,Name)
 				ToggleAntiExplosive(Button,Textlabel)
 			elseif Button.Name == "AntiFireChange" then
 				ToggleAntiFire(Button,Textlabel)
+			elseif Button.Name == "AntiFlingChange" then
+				ToggleAntiFling(Button,Textlabel)
 			end 
 		end)
 	end
@@ -780,7 +807,7 @@ local function SetCatagory(Name,Parent,Scrolling)
 		CreateButton("ToggleButton","Anti Grab:", Parent,"AntiGrabChange")
 		CreateButton("ToggleButton","Anti Explode:", Parent,"AntiExplodeChange")
 		CreateButton("ToggleButton","Anti Fire:", Parent,"AntiFireChange")
-		CreateButton("ToggleButton","Anti Poison:", Parent,"AntiPoisonChange")
+		CreateButton("ToggleButton","Anti Fling:", Parent,"AntiFlingChange")
 		CreateButton("ToggleButton","Anti Lag:", Parent,"AntiLagChange")
 		CreateButton("ToggleButton","Anti Void:", Parent,"AntiVoidChange")
 		CreateButton("ToggleButton","Anti Kick:", Parent,"AntiKickChange")
