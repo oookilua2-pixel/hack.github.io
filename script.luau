@@ -159,7 +159,7 @@ local function DeleteDrop(NameOfThing)
 	RS.MenuToys.DestroyToy:FireServer(workspace.eawheehwaSpawnedInToys:GetChildren()[#workspace.eawheehwaSpawnedInToys:GetChildren()])
 end
 
-local function SpawnDrop(NameOfThing, Position, Rotation) -- 1. Name of object -- 2. Position use Vector3.new -- 3. pls use Vector3.new() or else the will crash --  
+local function SpawnDrop(NameOfThing, Position, Rotation)
 	local RS = game:GetService("ReplicatedStorage")
 	task.spawn(function()
 		local Position_Set = CFrame.new(Position)
@@ -172,10 +172,8 @@ end
 
 local function DoMovementFaster()
 	local Character = game.Players.LocalPlayer.Character
-	--if not Character then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
 	local Humanoid = Character:FindFirstChild("Humanoid") 
---	if not Humanoid then player:Kick("the script have problem with movement so pls tell us on the discored so we can fix it in time") return end
-
+	
 	if WalkSpeedNIL == true and Shifting then
 		Humanoid.WalkSpeed = WalkSpeed
 		print(WalkSpeed)
@@ -193,10 +191,10 @@ end
 
 local function onSeated(isSeated)
 	if isSeated then
-		print("Player is now sitting on Thing")
+	--	print("Player is now sitting on Thing")
 		Shifting = false
 	else
-		print("Player is now standing.")
+	--	print("Player is now standing.")
 	end
 end
 
@@ -211,20 +209,75 @@ local function onJumpRequest()
 	end
 end
 
+local player = game.Players.LocalPlayer
+
+local function TeleportPlayerFling()
+	local char = player.Character or player.CharacterAdded:Wait()
+	local hrp = char:WaitForChild("HumanoidRootPart")
+	local origin = hrp.Position
+	local step, radius = 10, 10000000
+
+	local ignoreList = {char}
+	for _, p in pairs(game.Players:GetPlayers()) do
+		if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			table.insert(ignoreList, p.Character)
+		end
+	end
+
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterDescendantsInstances = ignoreList
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+	local closestHit, closestDist = nil, math.huge
+
+	for pitch = -90, 90, step do
+		for yaw = 0, 360, step do
+			local dir = CFrame.Angles(math.rad(pitch), math.rad(yaw), 0).LookVector
+			local result = workspace:Raycast(origin, dir * radius, raycastParams)
+			if result then
+				local dist = (result.Position - origin).Magnitude
+				if dist < closestDist then
+					closestDist = dist
+					closestHit = result
+				end
+			end
+		end
+	end
+
+	if closestHit then
+		local newPos = closestHit.Position + Vector3.new(0, 3, 0)
+		hrp.CFrame = CFrame.new(newPos, hrp.CFrame.LookVector + newPos)
+		print("Teleported to nearest ground at:", newPos)
+	else
+		warn("No nearby ground detected within search radius.")
+	end
+end
+
+
 local function DoAntiFling()
 	local Ragdolled = player.Character:FindFirstChild("Humanoid"):FindFirstChild("Ragdolled")
-	local LastTimeGround
 	
-	if Ragdolled.Value == false then
-		LastTimeGround = player.Character:FindFirstChild("HumanoidRootPart").Position
-	end
-	
-	if Ragdolled.Value == true then
-		warn("Player is ragdolled")
-		local ReplicatedStorage = game:GetService("ReplicatedStorage")
-		
-		ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
-		player.Character:FindFirstChild("HumanoidRootPart").Position = LastTimeGround
+	if AntiFling then
+		if Ragdolled.Value == true  then
+			warn("Player is ragdolled")
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			
+			while Ragdolled.Value == true or IsHeld do
+				ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
+				TeleportPlayerFling()
+				for Number, Objects in ipairs(player.Character:GetChildren()) do
+					if Objects:IsA("BasePart") then
+						Objects.Anchored = true
+					end
+				end
+				task.wait(0)
+			end
+			for Number, Objects in ipairs(player.Character:GetChildren()) do
+				if Objects:IsA("BasePart") then
+					Objects.Anchored = false
+				end
+			end
+		end
 	end
 end
 
@@ -241,8 +294,6 @@ local function DoAntiFire()
 		if CanBurn.Value then
 			warn("Player is on fire")
 			SpawnDrop("FireExtinguisher", Vector3.new(RootPart.Position.X,RootPart.Position.Y + 4,RootPart.Position.Z + 22))
-		elseif not CanBurn.Value then
-			warn("Player is not on fire")
 		end
 	end
 end
@@ -1461,6 +1512,7 @@ if player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled") then
 	player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled"):GetPropertyChangedSignal("Value"):Connect(function()
 		if AntiExplode then
 			DoAntiExplosive()
+		elseif AntiFling then
 			DoAntiFling()
 		end
 	end)
