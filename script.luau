@@ -221,6 +221,9 @@ local function DoAntiFling()
 	
 	if Ragdolled.Value == true then
 		warn("Player is ragdolled")
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		
+		ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
 		player.Character:FindFirstChild("HumanoidRootPart").Position = LastTimeGround
 	end
 end
@@ -1458,6 +1461,7 @@ if player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled") then
 	player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled"):GetPropertyChangedSignal("Value"):Connect(function()
 		if AntiExplode then
 			DoAntiExplosive()
+			DoAntiFling()
 		end
 	end)
 end
