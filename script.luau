@@ -44,6 +44,10 @@ local JumpPowerDefault = game:GetService("Workspace"):WaitForChild(player.Name):
 local WalkSpeed = 0
 local JumpPower = 0
 
+local c = 0
+local LastJumpPowerSlider = 0
+local LastWalkSpeedSlider = 0
+
 local Fly = false
 local Shifting = false
 local IsOnASlider = false
@@ -56,6 +60,7 @@ local AntiKick = false
 local AntiFire = false
 local AntiFling = false
 local AntiLag = false
+local AntiVoid = false
 
 local IsHeld = false
 
@@ -63,6 +68,8 @@ local MaxValue = 0.7 or 70/100
 local StartingValue = 0.4 or 40/100
 
 local CanSafeExplode = true
+local MapWith = 1200
+local MaxFlingDis = 1000                                                                                                                                                                    + MapWith
 
 local TemplatesTabel = {
 	["1_Num"] = {
@@ -157,7 +164,7 @@ local TweenInfo_Slider = TweenInfo.new(0.5,Enum.EasingStyle.Exponential)
 local function DeleteDrop(NameOfThing)
 	local RS = game:GetService("ReplicatedStorage")
 	
-	RS.MenuToys.DestroyToy:FireServer(workspace.eawheehwaSpawnedInToys:GetChildren()[#workspace.eawheehwaSpawnedInToys:GetChildren()])
+	RS.MenuToys.DestroyToy:FireServer(workspace[player.Name .. "SpawnedInToys"]:GetChildren()[#workspace[player.Name .. "SpawnedInToys"]:GetChildren()])
 end
 
 local function SpawnDrop(NameOfThing, Position, Rotation)
@@ -177,13 +184,10 @@ local function DoMovementFaster()
 	
 	if WalkSpeedNIL == true and Shifting then
 		Humanoid.WalkSpeed = WalkSpeed
-		print(WalkSpeed)
-		print(Humanoid.WalkSpeed)
 	elseif WalkSpeedNIL == false or not Shifting then
 		Humanoid.WalkSpeed = WalkSpeedDefault
 	end
 	if JumpHightNIL == true and Shifting then
-		print(Humanoid.JumpPower)
 		Humanoid.JumpPower = JumpPower
 	elseif JumpHightNIL == false or not Shifting then
 		Humanoid.JumpPower = JumpPowerDefault
@@ -192,10 +196,7 @@ end
 
 local function onSeated(isSeated)
 	if isSeated then
-	--	print("Player is now sitting on Thing")
 		Shifting = false
-	else
-	--	print("Player is now standing.")
 	end
 end
 
@@ -254,11 +255,44 @@ local function TeleportPlayerFling()
 	end
 end
 
+local function DoAntiMapFling()
+	if not AntiFling then return end
+	local Character = game:GetService("Players").LocalPlayer.Character
+	local ZeroPoint = game:GetService("Workspace"):FindFirstChild("ZeroPoint")
+
+	local RootPart = Character:FindFirstChild("HumanoidRootPart")
+
+	local Dis = (RootPart.Position - ZeroPoint.Position).Magnitude
+
+	if Dis == MaxFlingDis or Dis >= MaxFlingDis then
+		Character:MoveTo(ZeroPoint.Position)
+		game:GetService("ReplicatedStorage").GameCorrectionEvents.StopAllVelocity:FireServer()	
+		for _,Part in Character:GetChildren() do
+			if Part:IsA("BasePart") then
+				Part.Anchored = true
+			end
+		end
+		task.wait(0.1)
+		for _,Part in Character:GetChildren() do
+			if Part:IsA("BasePart") then
+				Part.Anchored = false
+			end
+		end
+	end
+end
 
 local function DoAntiFling()
 	local Ragdolled = player.Character:FindFirstChild("Humanoid"):FindFirstChild("Ragdolled")
 	
 	if AntiFling then
+		for _,Player in game:GetService("Players") do
+			local Character = game:GetService("Workspace"):FindFirstChild(Player.Name) 
+			for _,Part in Character:GetChildren() do
+				if Part:IsA("BasePart") then
+					Part.CanCollide = false
+				end
+			end
+		end
 		if Ragdolled.Value == true  then
 			warn("Player is ragdolled")
 			local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -277,6 +311,32 @@ local function DoAntiFling()
 				if Objects:IsA("BasePart") then
 					Objects.Anchored = false
 				end
+			end
+		end
+	elseif not AntiFling then
+		for _,Player in game:GetService("Players") do
+			local Character = game:GetService("Workspace"):FindFirstChild(Player.Name) 
+			for _,Part in Character:GetChildren() do
+				if Part:IsA("BasePart") then
+					Part.CanCollide = true
+				end
+			end
+		end
+	end
+end
+
+local function DoAntiVoid()
+	local Character = game.Players.LocalPlayer.Character
+	if not Character then return end
+	local RootPart = Character:FindFirstChild("HumanoidRootPart")
+	
+	while AntiVoid do
+		wait(0)
+		if RootPart then
+			if RootPart.Position.Y < Y_Void then
+				warn("Player is in void")
+				Character:MoveTo(game:GetService("Workspace"):FindFirstChild("ZeroPoint").Position)
+				game:GetService("ReplicatedStorage").GameCorrectionEvents.StopAllVelocity:FireServer()
 			end
 		end
 	end
@@ -361,8 +421,23 @@ local function onTouched(part)
 	part.CanCollide = not NoClip
 end
 
-local function ToggleAntiFling(Button,Text)
-	AntiFling = not AntiFling
+local function ToggleAntiVoid(Button,Text,Toggle)
+	if Toggle then
+		AntiVoid = not AntiVoid
+	end
+	if AntiVoid then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiVoid then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
+local function ToggleAntiFling(Button,Text,Toggle)
+	if Toggle then
+		AntiFling = not AntiFling
+	end
 	if AntiFling then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -372,8 +447,10 @@ local function ToggleAntiFling(Button,Text)
 	end
 end
 
-local function ToggleAntiExplosive(Button,Text)
-	AntiExplode = not AntiExplode
+local function ToggleAntiExplosive(Button,Text,Toggle)
+	if Toggle then 
+		AntiExplode = not AntiExplode
+	end
 	if AntiExplode then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -383,8 +460,10 @@ local function ToggleAntiExplosive(Button,Text)
 	end
 end
 
-local function ToggleAntiFire(Button,Text)
-	AntiFire = not AntiFire
+local function ToggleAntiFire(Button,Text,Toggle)
+	if Toggle then 
+		AntiFire = not AntiFire
+	end
 	if AntiFire then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -394,8 +473,10 @@ local function ToggleAntiFire(Button,Text)
 	end
 end
 
-local function ToggleAntiGrab(Button,Text)
-	AntiGrab = not AntiGrab
+local function ToggleAntiGrab(Button,Text,Toggle)
+	if Toggle then 
+		AntiGrab = not AntiGrab
+	end
 	if AntiGrab then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -405,8 +486,11 @@ local function ToggleAntiGrab(Button,Text)
 	end
 end
 
-local function ToggleNoClip(Button,Text)
-	NoClip = not NoClip
+local function ToggleNoClip(Button,Text,Toggle)
+	if Toggle then 
+		NoClip = not NoClip
+	end
+	
 	if NoClip then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -416,8 +500,10 @@ local function ToggleNoClip(Button,Text)
 	end
 end
 
-local function ToggleWalkSpeed(Button,Text)
-	WalkSpeedNIL = not WalkSpeedNIL
+local function ToggleWalkSpeed(Button,Text,Toggle)
+	if Toggle then
+		WalkSpeedNIL = not WalkSpeedNIL
+	end
 	if WalkSpeedNIL then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -427,8 +513,10 @@ local function ToggleWalkSpeed(Button,Text)
 	end
 end
 
-local function ToggleJumpHight(Button,Text)
-	JumpHightNIL = not JumpHightNIL
+local function ToggleJumpHight(Button,Text,Toggle)
+	if Toggle then
+		JumpHightNIL = not JumpHightNIL
+	end
 	if JumpHightNIL then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -438,8 +526,10 @@ local function ToggleJumpHight(Button,Text)
 	end
 end
 
-local function ToggleInfintyJumping(Button,Text)
-	InfinityJumping = not InfinityJumping
+local function ToggleInfintyJumping(Button,Text,Toggle)
+	if Toggle then
+		InfinityJumping = not InfinityJumping
+	end
 	if InfinityJumping then
 		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
 		Text.Text = "ON"
@@ -449,7 +539,25 @@ local function ToggleInfintyJumping(Button,Text)
 	end
 end
 
-local function UpdateSlider(Slider,OutPutValue,Fill,OutputText)
+local function SetValueSlider(Slider,OutPutValue,Fill,OutputText,Name)
+	local output = 0 
+
+	if Name == "WalkSpeed" then
+		output = LastWalkSpeedSlider
+	elseif Name == "JumpPower" then
+		output = LastJumpPowerSlider
+	end
+
+	local outputClamped = StartingValue + (output * (MaxValue - StartingValue))
+
+	Fill.Size = UDim2.fromScale(output,1)
+	print(Fill)
+
+	OutPutValue.Value = outputClamped
+	OutputText.Text = tostring(math.round(Fill.Size.X.Scale * 100))
+end
+
+local function UpdateSlider(Slider,OutPutValue,Fill,OutputText,Name)
 	local output = math.clamp(((Vector2.new(Mouse.X,Mouse.Y)-Slider.AbsolutePosition)/Slider.AbsoluteSize).X,0,1)
 
 	local outputClamped = StartingValue + (output*(MaxValue-StartingValue))
@@ -457,9 +565,37 @@ local function UpdateSlider(Slider,OutPutValue,Fill,OutputText)
 	if OutPutValue.Value ~= outputClamped then
 		TweenService:Create(Fill,TweenInfo_Slider,{Size = UDim2.fromScale(output,1)}):Play()
 	end
-
+	
+	if Name == "WalkSpeed" then
+		LastWalkSpeedSlider = output
+	elseif Name == "JumpHight" then
+		LastJumpPowerSlider = output
+	end
+	
 	OutPutValue.Value = outputClamped
 	OutputText.Text = tostring(math.round(Fill.Size.X.Scale*100))
+end
+
+local function SetButtons(Button,Textlabel,Toggle)
+	if Button.Name == "NoClip" then
+		ToggleNoClip(Button,Textlabel,Toggle)
+	elseif Button.Name == "WalkSpeedChange" then
+		ToggleWalkSpeed(Button,Textlabel,Toggle)
+	elseif Button.Name == "JumpHightChange" then
+		ToggleJumpHight(Button,Textlabel,Toggle)
+	elseif Button.Name == "InfintyJumpingChange" then
+		ToggleInfintyJumping(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiGrabChange" then
+		ToggleAntiGrab(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiExplodeChange" then
+		ToggleAntiExplosive(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiFireChange" then
+		ToggleAntiFire(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiFlingChange" then
+		ToggleAntiFling(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiVoidChange" then
+		ToggleAntiVoid(Button,Textlabel,Toggle)
+	end 
 end
 
 local function CreateButton(Type,Text,Parent,Name)
@@ -548,7 +684,7 @@ local function CreateButton(Type,Text,Parent,Name)
 		Frame_BackGround.Visible = true
 		Frame_BackGround.Name = "Fill"
 		Frame_BackGround.LayoutOrder = 0
-		Frame_BackGround.Size = UDim2.new(1,0,1,0)
+	--	Frame_BackGround.Size = UDim2.new(1,0,1,0)
 
 		local UIStroke = Instance.new("UIStroke")
 		UIStroke.Parent = Frame_BackGround
@@ -597,12 +733,9 @@ local function CreateButton(Type,Text,Parent,Name)
 		OutputValue.Parent = Frame
 		OutputValue.Name = "OutputValue"
 		OutputValue.Value = 0
-
-		UpdateSlider(Frame,OutputValue,Frame_BackGround,Textlabel)
-
-		--Frame_BackGround.Size = UDim2.fromScale(OutputValue.Value,1)
-		--Textlabel.Text = tostring(math.round(OutputValue.Value*100))
-
+		
+		SetValueSlider(Frame,OutputValue,Frame_BackGround,Textlabel,Name)
+		
 		if OutputValue.Value <= 0.40 then Frame_BackGround:FindFirstChild("UIStroke").Thickness = 0 Frame_BackGround.BackgroundTransparency = 1 elseif OutputValue.Value >= 0.40 then Frame_BackGround:FindFirstChild("UIStroke").Thickness = 2 Frame_BackGround.BackgroundTransparency = 0 end
 
 		local RealNumber = 0
@@ -610,17 +743,15 @@ local function CreateButton(Type,Text,Parent,Name)
 		TextButton.MouseButton1Down:Connect(function()
 			IsOnASlider = true
 			while IsOnASlider do
-				task.wait()
-				UpdateSlider(Frame,OutputValue,Frame_BackGround,Textlabel)
+				wait()
+				UpdateSlider(Frame,OutputValue,Frame_BackGround,Textlabel,Name)
 			end
 		end)
 
 		UserInputService.InputChanged:Connect(function()
 			if Name == "WalkSpeed" then
-				--print("WalkSpeed Switch to ... "..math.round(Frame_BackGround.Size.X.Scale*100))
 				WalkSpeed = math.round(Frame_BackGround.Size.X.Scale*100)
 			elseif Name == "JumpHight" then
-				--print("JumpHight Switch to ... "..math.round(Frame_BackGround.Size.X.Scale*100))
 				JumpPower = math.round(Frame_BackGround.Size.X.Scale*100)
 			end
 		end)
@@ -805,25 +936,11 @@ local function CreateButton(Type,Text,Parent,Name)
 		UIListLayout_Hold.ItemLineAlignment = Enum.ItemLineAlignment.Automatic
 		UIListLayout_Hold.VerticalAlignment = Enum.VerticalAlignment.Center
 		UIListLayout_Hold.VerticalFlex = Enum.UIFlexAlignment.None
+		
+		SetButtons(Button,Textlabel,false)
 
 		Button.MouseButton1Click:Connect(function()
-			if Button.Name == "NoClip" then
-				ToggleNoClip(Button,Textlabel)
-			elseif Button.Name == "WalkSpeedChange" then
-				ToggleWalkSpeed(Button,Textlabel)
-			elseif Button.Name == "JumpHightChange" then
-				ToggleJumpHight(Button,Textlabel)
-			elseif Button.Name == "InfintyJumpingChange" then
-				ToggleInfintyJumping(Button,Textlabel)
-			elseif Button.Name == "AntiGrabChange" then
-				ToggleAntiGrab(Button,Textlabel)
-			elseif Button.Name == "AntiExplodeChange" then
-				ToggleAntiExplosive(Button,Textlabel)
-			elseif Button.Name == "AntiFireChange" then
-				ToggleAntiFire(Button,Textlabel)
-			elseif Button.Name == "AntiFlingChange" then
-				ToggleAntiFling(Button,Textlabel)
-			end 
+			SetButtons(Button,Textlabel,true)
 		end)
 	end
 end
@@ -905,24 +1022,6 @@ local function CreateZeroPoint()
 	ZeroPoint.CanCollide = false
 	ZeroPoint.Transparency = 0.5
 	ZeroPoint.Name = "ZeroPoint"
-end
-
-local function VoidPart()
-	local Void = Instance.new("Part")
-	Void.Parent = workspace
-	Void.Anchored = true
-	Void.CanCollide = false
-	Void.Transparency = 0
-	Void.Material = Enum.Material.SmoothPlastic
-	Void.Size = Vector3.new(10000, 1, 10000)
-	Void.CFrame = CFrame.new(0, Y_Void, 0)
-
-	Void.Touched:Connect(function(Part)
-		if Part.Name == "HumanoidRootPart" then
-			local HumanoidRootPart = Part
-			if HumanoidRootPart.Parent:IsA("Model") then HumanoidRootPart.Parent:MoveTo(workspace:FindFirstChild("ZeroPoint").Position) elseif not HumanoidRootPart.Parent:IsA("Model") then return end
-		end
-	end)
 end
 
 local function CreateGUI()
@@ -1091,8 +1190,6 @@ local function CreateGUI()
 	ScrollFrame_Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	ScrollFrame_Frame.BackgroundTransparency = 1
 	ScrollFrame_Frame.LayoutOrder = 0
-
-	print(ScrollFrame_Frame)
 
 	local UIListLayout_Template = Instance.new("UIListLayout")
 	UIListLayout_Template.Parent = ScrollFrame_Frame
@@ -1476,7 +1573,6 @@ end
 local function StartScript()
 	print("Started")
 	CreateZeroPoint()
-	VoidPart()
 	CreateLoadingScreen()
 
 	task.wait(0)
@@ -1513,11 +1609,20 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-RunService.RenderStepped:Connect(function()
-	DoMovementFaster()
-	DoAntiGrab()
-	DoAntiFire()
-end)
+local function CheckShifting()
+	local character = player.Character
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+	local hipHeight = humanoid.HipHeight
+
+	if hipHeight < -1.5 then
+		Shifting = true
+	elseif hipHeight > -0.5 then
+		Shifting = false
+	else
+		print("HipHeight in transition range:", hipHeight)
+	end
+end
 
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("HumanoidRootPart").Touched:Connect(onTouched)
 game:GetService("Workspace"):WaitForChild(player.Name):WaitForChild("Humanoid").Seated:Connect(onSeated)
@@ -1526,17 +1631,14 @@ if game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld") then
 	game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld"):GetPropertyChangedSignal("Value"):Connect(function() 
 		if game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld").Value == true then
 			IsHeld = true
-			print("Player is Held") 
 		elseif game:GetService("Players").LocalPlayer:FindFirstChild("IsHeld").Value == false then
 			IsHeld = false
-			print("Player is Not Held") 
 		end
 	end)
 end
 
 game.Players.LocalPlayer.Character:WaitForChild("Humanoid").Died:Connect(function()
 	Shifting = false
-	print("Dead")
 end)
 
 game:GetService("UserInputService").JumpRequest:Connect(onJumpRequest)
@@ -1568,13 +1670,32 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
-UserInputService.InputBegan:Connect(function(input)
-	if WalkSpeedNIL then
-		if input.KeyCode == Enum.KeyCode.LeftControl then
-			print("Shifting")
-			Shifting = not Shifting
-		end
-	end
+--UserInputService.InputBegan:Connect(function(input)
+--	if WalkSpeedNIL then
+--		if input.KeyCode == Enum.KeyCode.LeftControl then
+--			print("Shifting")
+--			Shifting = not Shifting
+--		end
+--	end
+--end)
+
+RunService.RenderStepped:Connect(function()
+	CheckShifting()
+end)
+RunService.RenderStepped:Connect(function()
+	DoMovementFaster()
+end)
+RunService.RenderStepped:Connect(function()
+	DoAntiGrab()
+end)
+RunService.RenderStepped:Connect(function()
+	DoAntiFire()
+end)
+RunService.RenderStepped:Connect(function()
+	DoAntiVoid()
+end)
+RunService.RenderStepped:Connect(function()
+	DoAntiMapFling()
 end)
 
 StartScript()
