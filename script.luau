@@ -544,7 +544,7 @@ local function SetValueSlider(Slider,OutPutValue,Fill,OutputText,Name)
 
 	if Name == "WalkSpeed" then
 		output = LastWalkSpeedSlider
-	elseif Name == "JumpPower" then
+	elseif Name == "JumpHight" then
 		output = LastJumpPowerSlider
 	end
 
