@@ -26,6 +26,9 @@ local startValues = {1, 1, 1, 1, 1}
 local driver = Instance.new("NumberValue")
 driver.Value = 0
 
+local AntiFlingConnection
+local AntiFlingEnabled = false
+
 local I = 0
 local Y_Void = -20
 local Layorder_v = 0
@@ -51,6 +54,7 @@ local LastWalkSpeedSlider = 0
 local Fly = false
 local Shifting = false
 local IsOnASlider = false
+local SliderOn = ""
 local InfinityJumping = false
 local canJump = true
 
@@ -69,7 +73,18 @@ local StartingValue = 0.4 or 40/100
 
 local CanSafeExplode = true
 local MapWith = 1200
-local MaxFlingDis = 1000                                                                                                                                                                    + MapWith
+local MaxFlingDis = 1000                                                                                                                                             																								                                                                               + MapWith
+
+local ListToButtons = nil
+
+local TGrab = false
+local TKill = false
+local TKick = false
+local TFling  = false
+
+local TDo = false
+
+local ExitT = nil
 
 local TemplatesTabel = {
 	["1_Num"] = {
@@ -255,6 +270,18 @@ local function TeleportPlayerFling()
 	end
 end
 
+local function DoAntiKick()
+	local WorkSpace = game:GetService("Workspace")
+	
+	if AntiKick then
+		for _,Parts in WorkSpace:GetChildren() do
+			if Parts:IsA("BasePart") and Parts.Name == "PlayerCharacterLocationDetector" then
+				Parts:Destroy()
+			end
+		end
+	end
+end
+
 local function DoAntiMapFling()
 	if not AntiFling then return end
 	local Character = game:GetService("Players").LocalPlayer.Character
@@ -282,45 +309,43 @@ local function DoAntiMapFling()
 end
 
 local function DoAntiFling()
-	local Ragdolled = player.Character:FindFirstChild("Humanoid"):FindFirstChild("Ragdolled")
-	
 	if AntiFling then
-		for _,Player in game:GetService("Players") do
-			local Character = game:GetService("Workspace"):FindFirstChild(Player.Name) 
-			for _,Part in Character:GetChildren() do
-				if Part:IsA("BasePart") then
-					Part.CanCollide = false
-				end
-			end
+		if AntiFlingConnection then
+			AntiFlingConnection:Disconnect()
 		end
-		if Ragdolled.Value == true  then
-			warn("Player is ragdolled")
-			local ReplicatedStorage = game:GetService("ReplicatedStorage")
-			
-			while Ragdolled.Value == true or IsHeld do
-				ReplicatedStorage.GameCorrectionEvents.StopAllVelocity:FireServer()
-				TeleportPlayerFling()
-				for Number, Objects in ipairs(player.Character:GetChildren()) do
-					if Objects:IsA("BasePart") then
-						Objects.Anchored = true
+
+		while AntiFling do
+			if AntiFling then
+				for _, player in pairs(Players:GetPlayers()) do
+					if player ~= game:GetService("Players").LocalPlayer and player.Character then
+						task.spawn(function()
+							for _, part in pairs(player.Character:GetChildren()) do
+								pcall(function()
+									if part:IsA("BasePart") then
+										part.CanCollide = false
+										part.Velocity = Vector3.zero
+										part.RotVelocity = Vector3.zero
+										part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+										part.Massless = true
+									elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
+										local handle = part.Handle
+										handle.CanCollide = false
+										handle.Velocity = Vector3.zero
+										handle.RotVelocity = Vector3.zero
+										handle.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+										handle.Massless = true
+									end
+								end)
+							end
+						end)
 					end
 				end
-				task.wait(0)
-			end
-			for Number, Objects in ipairs(player.Character:GetChildren()) do
-				if Objects:IsA("BasePart") then
-					Objects.Anchored = false
-				end
 			end
 		end
-	elseif not AntiFling then
-		for _,Player in game:GetService("Players") do
-			local Character = game:GetService("Workspace"):FindFirstChild(Player.Name) 
-			for _,Part in Character:GetChildren() do
-				if Part:IsA("BasePart") then
-					Part.CanCollide = true
-				end
-			end
+	else
+		if AntiFlingConnection then
+			AntiFlingConnection:Disconnect()
+			AntiFlingConnection = nil
 		end
 	end
 end
@@ -386,6 +411,53 @@ local function DoAntiGrab()
 	end
 end
 
+local function DoAntiLag()
+	if AntiLag then
+		for _,Player in game:GetService("Players"):GetChildren() do
+			local Character = game:GetService("Workspace"):FindFirstChild(Player.Name) 
+			if not Character then return end
+			for _,Model in Character:GetChildren() do
+				if not Model then return end
+				if Model:IsA("Model") and Model.Name == "GrabParts" then
+					if not Model then return end
+					if Model:FindFirstChild("BeamPart") then
+						if not Model then return end
+						if not Model:FindFirstChild("BeamPart") then return end
+						Model:FindFirstChild("BeamPart"):Destroy()
+					end
+				end
+			end
+		end
+	end
+end
+
+local function DoKillTorment()
+	if TKill  then
+		local Character = game:GetService("Workspace"):FindFirstChild(game:GetService("Players").LocalPlayer.Name)
+		if not Character then return end
+		local Humanoid = Character:FindFirstChild("Humanoid")
+		if not Humanoid then return end
+		local RootPart = Character:FindFirstChild("HumanoidRootPart")
+		if not RootPart then return end
+
+		local Character_Head = Character.Head
+		local PartOwner = Character_Head:FindFirstChild("PartOwner")
+		
+		if not Character_Head then return end
+		if not PartOwner then return end
+		
+		if PartOwner.Value == Character.Name then return end
+		
+		local GrabarCharacter = workspace:FindFirstChild(PartOwner.Value)
+		if not GrabarCharacter:IsA("Model") then return end
+		
+		--local Event = game:GetService("ReplicatedStorage").GrabEvents.CreateGrabLine
+		
+		print("Grabed from ... ".. GrabarCharacter.Name)
+		--Event:FireServer(game:GetService("Players").LocalPlayer,	GrabarCharacter,GrabarCharacter.HumanoidRootPart.CFrame)
+	end
+end
+
 local function DoAntiExplosive()	
 	local Ragdolled = player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled")
 	if Ragdolled then
@@ -421,6 +493,32 @@ local function onTouched(part)
 	part.CanCollide = not NoClip
 end
 
+local function ToggleAntiKick(Button,Text,Toggle)
+	if Toggle then
+		AntiKick = not AntiKick
+	end
+	if AntiKick then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiKick then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
+local function ToggleAntiLag(Button,Text,Toggle)
+	if Toggle then
+		AntiLag = not AntiLag
+	end
+	if AntiLag then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not AntiLag then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
 local function ToggleAntiVoid(Button,Text,Toggle)
 	if Toggle then
 		AntiVoid = not AntiVoid
@@ -445,6 +543,7 @@ local function ToggleAntiFling(Button,Text,Toggle)
 		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
 		Text.Text = "OFF"
 	end
+	DoAntiFling()
 end
 
 local function ToggleAntiExplosive(Button,Text,Toggle)
@@ -539,6 +638,19 @@ local function ToggleInfintyJumping(Button,Text,Toggle)
 	end
 end
 
+local function ToggleTorment(Button,Text,Toggle)
+	if Toggle then
+		TDo = not TDo
+	end
+	if TDo then
+		Button.BackgroundColor3 = Color3.fromRGB(67, 255, 64)
+		Text.Text = "ON"
+	elseif not TDo then
+		Button.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+		Text.Text = "OFF"
+	end
+end
+
 local function SetValueSlider(Slider,OutPutValue,Fill,OutputText,Name)
 	local output = 0 
 
@@ -551,7 +663,6 @@ local function SetValueSlider(Slider,OutPutValue,Fill,OutputText,Name)
 	local outputClamped = StartingValue + (output * (MaxValue - StartingValue))
 
 	Fill.Size = UDim2.fromScale(output,1)
-	print(Fill)
 
 	OutPutValue.Value = outputClamped
 	OutputText.Text = tostring(math.round(Fill.Size.X.Scale * 100))
@@ -595,7 +706,268 @@ local function SetButtons(Button,Textlabel,Toggle)
 		ToggleAntiFling(Button,Textlabel,Toggle)
 	elseif Button.Name == "AntiVoidChange" then
 		ToggleAntiVoid(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiLagChange" then
+		ToggleAntiLag(Button,Textlabel,Toggle)
+	elseif Button.Name == "AntiKickChange" then
+		ToggleAntiKick(Button,Textlabel,Toggle)
+	elseif Button.Name == "Torment" then
+		ToggleTorment(Button,Textlabel,Toggle)
 	end 
+end
+
+local function CreateButtonList(name, parent, text, button)
+	local textButton = Instance.new("TextButton")
+	textButton.Name = name
+	textButton.Parent = parent
+	textButton.Text = text
+	textButton.ZIndex = 2
+	textButton.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+	textButton.BackgroundTransparency = 0
+	textButton.BorderSizePixel = 0
+	textButton.AutoButtonColor = true
+	textButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	textButton.TextScaled = true
+	textButton.Font = Enum.Font.FredokaOne
+
+	local function addStroke(thickness, mode)
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(0, 0, 0)
+		stroke.Thickness = thickness
+		stroke.Transparency = 0
+		stroke.ApplyStrokeMode = mode
+		stroke.Parent = textButton
+	end
+
+	addStroke(3, Enum.ApplyStrokeMode.Border)
+	addStroke(4, Enum.ApplyStrokeMode.Contextual)
+
+	local uiCorner = Instance.new("UICorner")
+	uiCorner.CornerRadius = UDim.new(0.1, 0)
+	uiCorner.Parent = textButton
+	
+	local toggleStates = {
+		Grab = function()
+			return TGrab
+		end,
+		Kill = function()
+			return TKill
+		end,
+		Kick = function()
+			return TKick
+		end,
+		Fling = function()
+			return TFling
+		end
+	}
+	
+	local handler = toggleStates[name]
+	if not handler then return end
+
+	local isActive = handler()
+
+	if isActive then
+		textButton.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
+	else
+		textButton.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+	end
+
+	textButton.MouseButton1Click:Connect(function()
+		local listText = button.ListText
+
+		local toggleStates = {
+			Grab = function()
+				TGrab = not TGrab
+				return TGrab
+			end,
+			Kill = function()
+				TKill = not TKill
+				return TKill
+			end,
+			Kick = function()
+				TKick = not TKick
+				return TKick
+			end,
+			Fling = function()
+				TFling = not TFling
+				return TFling
+			end
+		}
+
+		local handler = toggleStates[name]
+		if not handler then return end
+
+		local isActive = handler()
+
+		if isActive then
+			if listText.Text == "TormentType:" or listText.Text == "" then
+				listText.Text = listText.Text .. " ".. name
+			else
+				listText.Text = listText.Text .. "," .. name
+			end
+			textButton.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
+		else
+			listText.Text = listText.Text
+				:gsub("," .. name, "")
+				:gsub(name .. ",", "")
+				:gsub(" "..name, "")
+
+			if listText.Text == "" or listText.Text == "TormentType:" then
+				listText.Text = "TormentType:"
+			end
+			textButton.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		end
+	end)
+end
+
+local function ClearList()
+	for _,Button in ListToButtons:GetChildren() do
+		if Button:IsA("TextButton") then
+			Button:Destroy()
+		end
+	end
+end
+
+local function CreateList(Name,Button)
+	if Name == "IfGrabed" then
+		ListToButtons.Parent.Parent.Parent.Visible = true
+		ExitT.Visible = true
+		
+		ClearList()
+		
+		CreateButtonList("Grab",ListToButtons,"Grab",Button)
+		CreateButtonList("Kill",ListToButtons,"Kill",Button)
+		CreateButtonList("Kick",ListToButtons,"Kick",Button)
+		CreateButtonList("Fling",ListToButtons,"Fling",Button)
+	end
+end
+
+local function CreateListToHoldThings(Parent)
+	local Frame = Instance.new("Frame")
+	Frame.Size = UDim2.new(0.325,0,5.885,0)
+	Frame.Position = UDim2.new(1.205,0,3.985,0)
+	Frame.AnchorPoint = Vector2.new(0.5,0.5)
+	Frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+	Frame.BackgroundTransparency = 0
+	Frame.Visible = true
+	Frame.Parent = Parent
+	Frame.Name = "List"
+	
+	local UICorner = Instance.new("UICorner")
+	UICorner.CornerRadius = UDim.new(0.025,0)
+	UICorner.Parent = Frame
+	
+	local UIStorke = Instance.new("UIStroke")
+	UIStorke.Color = Color3.fromRGB(0,0,0)
+	UIStorke.Thickness = 5
+	UIStorke.Transparency = 0
+	UIStorke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	UIStorke.Parent = Frame
+	
+	local UIListLayout_Hold = Instance.new("UIListLayout")
+	UIListLayout_Hold.Parent = Frame
+	UIListLayout_Hold.Padding = UDim.new(0, 0)
+	UIListLayout_Hold.FillDirection = Enum.FillDirection.Vertical
+	UIListLayout_Hold.SortOrder = Enum.SortOrder.LayoutOrder
+	UIListLayout_Hold.Wraps = false
+	UIListLayout_Hold.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	UIListLayout_Hold.HorizontalFlex = Enum.UIFlexAlignment.None
+	UIListLayout_Hold.ItemLineAlignment = Enum.ItemLineAlignment.Automatic
+	UIListLayout_Hold.VerticalAlignment = Enum.VerticalAlignment.Top
+	UIListLayout_Hold.VerticalFlex = Enum.UIFlexAlignment.None
+	
+	local Frame_2 = Instance.new("Frame")
+	Frame_2.Size = UDim2.new(0.95, 0,0.825, 0)
+	Frame_2.AnchorPoint = Vector2.new(0.5,0.5)
+	Frame_2.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+	Frame_2.BackgroundTransparency = 1
+	Frame_2.Visible = true
+	Frame_2.Parent = Frame
+	Frame_2.Name = "Frame" 
+	Frame_2.LayoutOrder = 999
+	
+	local ScrollFrameMain = Instance.new("ScrollingFrame")
+	ScrollFrameMain.Parent =	Frame_2
+	ScrollFrameMain.Archivable = true
+	ScrollFrameMain.Active = true
+	ScrollFrameMain.AnchorPoint = Vector2.new(0.5,0.5)
+	ScrollFrameMain.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	ScrollFrameMain.BackgroundTransparency = 1
+	ScrollFrameMain.Interactable = true
+	ScrollFrameMain.Name = "ScrollingFrame"
+	ScrollFrameMain.Position = UDim2.new(0.5,0,0.5,0)
+	ScrollFrameMain.Rotation = 0
+	ScrollFrameMain.Size = UDim2.new(0.97,0,0.98,0)
+	ScrollFrameMain.Visible = true
+	ScrollFrameMain.CanvasSize = UDim2.new(0,0,2,0)
+	ScrollFrameMain.ScrollingDirection = Enum.ScrollingDirection.Y
+	ScrollFrameMain.ScrollBarThickness = 5 -- 6
+	ScrollFrameMain.VerticalScrollBarPosition = Enum.VerticalScrollBarPosition.Right
+	ScrollFrameMain.ScrollBarImageColor3 = Color3.fromRGB(0,0,0)
+	ScrollFrameMain.Selectable = false
+	
+	local Holder = Instance.new("Frame")
+	Holder.Size = UDim2.new(0.95,0,0.95,0)
+	Holder.AnchorPoint = Vector2.new(0.5,0.5)
+	Holder.Position = UDim2.new(0.5,0,0.5,0)
+	Holder.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+	Holder.BackgroundTransparency = 1
+	Holder.Visible = true
+	Holder.Parent = ScrollFrameMain
+	Holder.Name = "Holder" 
+	
+	ListToButtons = Holder
+	
+	local UIGridLayout = Instance.new("UIGridLayout")
+	UIGridLayout.Parent = Holder
+	UIGridLayout.CellPadding = UDim2.new(0,0,0.02,0)
+	UIGridLayout.CellSize = UDim2.new(0.95,0,0.1,0)
+	UIGridLayout.FillDirection = Enum.FillDirection.Horizontal
+	UIGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	UIGridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+	UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	
+	local TitleFrame = Instance.new("Frame")
+	TitleFrame.Size = UDim2.new(1,0,0.164,0)
+	TitleFrame.AnchorPoint = Vector2.new(0.5,0.5)
+	TitleFrame.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+	TitleFrame.BackgroundTransparency = 0
+	TitleFrame.Visible = true
+	TitleFrame.Parent = Frame
+	TitleFrame.Name = "TitleFrame" 
+	TitleFrame.LayoutOrder = -999
+	
+	local UICorner = Instance.new("UICorner")
+	UICorner.CornerRadius = UDim.new(0.1,0)
+	UICorner.Parent = TitleFrame
+
+	local UIStorke = Instance.new("UIStroke")
+	UIStorke.Color = Color3.fromRGB(0,0,0) 
+	UIStorke.Thickness = 4
+	UIStorke.Transparency = 0
+	UIStorke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	UIStorke.Parent = TitleFrame
+	
+	local Textlabel = Instance.new("TextLabel")
+	Textlabel.Parent = TitleFrame
+	Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+	Textlabel.BackgroundTransparency = 1
+	Textlabel.Text = "List"
+	Textlabel.Font = Enum.Font.FredokaOne
+	Textlabel.TextScaled = true
+	Textlabel.Visible = true
+	Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+	Textlabel.Name = "Title"
+	Textlabel.Position = UDim2.new(0.5,0,0.5,0)
+	Textlabel.AnchorPoint = Vector2.new(0.5,0.5)
+	Textlabel.ZIndex = 2
+	Textlabel.Size = UDim2.new(0.5,0,0.9,0)
+	
+	local UIStorke = Instance.new("UIStroke")
+	UIStorke.Color = Color3.fromRGB(0,0,0)
+	UIStorke.Thickness = 4
+	UIStorke.Transparency = 0
+	UIStorke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	UIStorke.Parent = Textlabel
 end
 
 local function CreateButton(Type,Text,Parent,Name)
@@ -684,7 +1056,6 @@ local function CreateButton(Type,Text,Parent,Name)
 		Frame_BackGround.Visible = true
 		Frame_BackGround.Name = "Fill"
 		Frame_BackGround.LayoutOrder = 0
-	--	Frame_BackGround.Size = UDim2.new(1,0,1,0)
 
 		local UIStroke = Instance.new("UIStroke")
 		UIStroke.Parent = Frame_BackGround
@@ -742,10 +1113,12 @@ local function CreateButton(Type,Text,Parent,Name)
 
 		TextButton.MouseButton1Down:Connect(function()
 			IsOnASlider = true
-			while IsOnASlider do
-				wait()
-				UpdateSlider(Frame,OutputValue,Frame_BackGround,Textlabel,Name)
-			end
+			SliderOn = Name
+			game:GetService("RunService").Heartbeat:Connect(function()
+				if IsOnASlider and SliderOn == Name then
+					UpdateSlider(Frame,OutputValue,Frame_BackGround,Textlabel,Name)
+				end
+			end)
 		end)
 
 		UserInputService.InputChanged:Connect(function()
@@ -942,6 +1315,54 @@ local function CreateButton(Type,Text,Parent,Name)
 		Button.MouseButton1Click:Connect(function()
 			SetButtons(Button,Textlabel,true)
 		end)
+	elseif Type == "ListButton" then
+		local Button = Instance.new("TextButton")
+		Button.Parent = Parent
+		Button.Text = ""
+		Button.BackgroundColor3 = Color3.fromRGB(9,9,9)
+		Button.Visible = true
+		Button.Name = Name
+		Button.LayoutOrder = Layorder_v
+		Button.Size = UDim2.new(0.8,0,0.04,0)
+
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Button
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.025,0)
+		UICorner.Parent = Button
+
+		local Textlabel = Instance.new("TextLabel")
+		Textlabel.Parent = Button
+		Textlabel.BackgroundColor3 = Color3.fromRGB(9, 9, 9)
+		Textlabel.BackgroundTransparency = 1
+		Textlabel.Text = Text
+		Textlabel.Font = Enum.Font.FredokaOne
+		Textlabel.TextScaled = true
+		Textlabel.Visible = true
+		Textlabel.TextColor3 = Color3.fromRGB(255,255,255)
+		Textlabel.Name = "ListText"
+		Textlabel.Position = UDim2.new(0.5,0,0.5,0)
+		Textlabel.AnchorPoint = Vector2.new(0.5,0.5)
+		Textlabel.ZIndex = 2
+		Textlabel.Size = UDim2.new(0.9,0,0.9,0)
+
+		local UIStroke = Instance.new("UIStroke")
+		UIStroke.Parent = Textlabel
+		UIStroke.Thickness = 4
+		UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		UIStroke.Transparency = 0
+		UIStroke.Color = Color3.fromRGB(0,0,0)
+	
+		Button.MouseButton1Click:Connect(function()
+			if Button.Name == "TormentType" then
+				CreateList("IfGrabed",Button)
+			end
+		end)
 	end
 end
 
@@ -986,8 +1407,9 @@ local function SetCatagory(Name,Parent,Scrolling)
 		
 		CreateButton("Space","SpaceBetwin", Parent,"Space")
 		
-		CreateButton("Text","if grabed torment way", Parent,"Title")
-		CreateButton("ToggleButton","torment:", Parent,"torment")
+		CreateButton("Text","if grabed Torment way", Parent,"Title")
+		CreateButton("ListButton","TormentType:",Parent,"TormentType")
+		CreateButton("ToggleButton","DoTorment:", Parent,"Torment")
 	end
 end
 
@@ -1046,6 +1468,44 @@ local function CreateGUI()
 	MainFrame.BackgroundTransparency = 1
 	MainFrame.Interactable = true
 	MainFrame.ZIndex = math.huge
+	
+	CreateListToHoldThings(MainFrame)
+	
+	local Template_E = Instance.new("TextButton")
+	Template_E.Parent = MainFrame
+	Template_E.BackgroundColor3 = Color3.fromRGB(255, 93, 93)
+	Template_E.Text = "X"
+	Template_E.Name = "ExitList"
+	Template_E.TextColor3 = Color3.fromRGB(255,255,255)
+	Template_E.Font = Enum.Font.GothamBold
+	Template_E.Size = UDim2.new(0.097,0,1.013,0)
+	Template_E.Position = UDim2.new(1.32,0,0.478,0)
+	Template_E.AnchorPoint = Vector2.new(0,0)
+	Template_E.TextScaled = true
+	
+	ExitT = Template_E
+
+	local UIStroke_Template = Instance.new("UIStroke")
+	UIStroke_Template.Parent = Template_E
+	UIStroke_Template.Enabled = true
+	UIStroke_Template.Color = Color3.fromRGB(0, 0, 0)
+	UIStroke_Template.Thickness = 3
+	UIStroke_Template.Transparency = 0
+	UIStroke_Template.LineJoinMode = Enum.LineJoinMode.Round
+	UIStroke_Template.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	
+	local UIStroke_Template = Instance.new("UIStroke")
+	UIStroke_Template.Parent = Template_E
+	UIStroke_Template.Enabled = true
+	UIStroke_Template.Color = Color3.fromRGB(0, 0, 0)
+	UIStroke_Template.Thickness = 4
+	UIStroke_Template.Transparency = 0
+	UIStroke_Template.LineJoinMode = Enum.LineJoinMode.Round
+	UIStroke_Template.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	
+	local UICorner_Template = Instance.new("UICorner")
+	UICorner_Template.Parent = Template_E
+	UICorner_Template.CornerRadius = UDim.new(0.1, 0)
 
 	local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
 	UIAspectRatioConstraint.Parent = MainFrame
@@ -1564,7 +2024,7 @@ local function StartPercentage()
 	tween_Done:Play()
 	tween_percent_text:Play()
 	tween_precent_text_UI_Stroke_2:Play()
-	task.wait(2)
+	task.wait(1.25)
 	SetSettings("End")
 	unlockMouse()
 	CreateGUI()
@@ -1647,8 +2107,6 @@ if player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled") then
 	player.Character:WaitForChild("Humanoid"):FindFirstChild("Ragdolled"):GetPropertyChangedSignal("Value"):Connect(function()
 		if AntiExplode then
 			DoAntiExplosive()
-		elseif AntiFling then
-			DoAntiFling()
 		end
 	end)
 end
@@ -1670,15 +2128,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
---UserInputService.InputBegan:Connect(function(input)
---	if WalkSpeedNIL then
---		if input.KeyCode == Enum.KeyCode.LeftControl then
---			print("Shifting")
---			Shifting = not Shifting
---		end
---	end
---end)
-
 RunService.RenderStepped:Connect(function()
 	CheckShifting()
 end)
@@ -1697,5 +2146,22 @@ end)
 RunService.RenderStepped:Connect(function()
 	DoAntiMapFling()
 end)
+RunService.RenderStepped:Connect(function()
+	DoAntiLag()
+end)
+RunService.RenderStepped:Connect(function()
+	DoAntiKick()
+end)
+RunService.RenderStepped:Connect(function()
+	DoKillTorment()
+end)
 
 StartScript()
+
+task.wait(2.5)
+
+ExitT.MouseButton1Click:Connect(function()
+	print(ListToButtons)
+	ListToButtons.Parent.Parent.Parent.Visible = false
+	ExitT.Visible = false
+end)
